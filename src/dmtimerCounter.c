@@ -106,10 +106,10 @@ void configure_platform(void)
     DMTimer2ModuleClkConfig();
 
     /* Initialize the UART console */
-    ConsoleUtilsInit();
+    //ConsoleUtilsInit();
 
     /* Select the console type based on compile time check */
-    ConsoleUtilsSetType(CONSOLE_UART);
+    //ConsoleUtilsSetType(CONSOLE_UART);
 
     /* Enable IRQ in CPSR */
     IntMasterIRQEnable();

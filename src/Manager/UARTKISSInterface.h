@@ -1,0 +1,6 @@
+#ifndef __SRC_MANAGER_UARTKISSINTERFACE_H_
+#define __SRC_MANAGER_UARTKISSINTERFACE_H_
+
+int UARTKISSInterface_init();
+
+#endif

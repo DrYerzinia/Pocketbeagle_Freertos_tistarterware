@@ -24,11 +24,11 @@ BIN = $(PREFIX)objcopy
 
 APP_LOAD_ADDR = 0x80000000 # LOAD IN RAM
 
-LIB_C = $(TOOLCHAIN_ROOT)/arm-none-eabi/lib
-LIB_GCC = $(TOOLCHAIN_ROOT)/lib/gcc/arm-none-eabi/7.3.1
+LIB_C = $(TOOLCHAIN_ROOT)/lib/arm-none-eabi/lib
+LIB_GCC = $(TOOLCHAIN_ROOT)/lib/gcc/arm-none-eabi/6.3.1
 
 # User source files
-USER_SRC = $(wildcard src/*.c)
+USER_SRC = $(wildcard src/*.c src/Manager/*.c)
 
 # RTOS root
 FREERTOS_ROOT = lib/FreeRTOS/Source

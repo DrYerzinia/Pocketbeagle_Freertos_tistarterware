@@ -2,9 +2,11 @@
 #include "soc_AM335x.h"
 #include "beaglebone.h"
 #include "interrupt.h"
+#include "gpio_v2.h"
 #include "dmtimer.h"
 #include "error.h"
 
+#include "Manager/UARTKISSInterface.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -14,47 +16,68 @@
 void configure_platform(void);
 extern volatile unsigned int cntValue;
 
-xSemaphoreHandle xBinarySemaphore;
+#define USR2_LED_GPIO_INSTANCE_ADDRESS	(SOC_GPIO_1_REGS)
+#define USR2_LED_GPIO_PIN				(23)
 
-void vTask1(void *pvParameters) {
-    int i = 0;
-    while (1) {
-       xSemaphoreTake(xBinarySemaphore, portMAX_DELAY);
-       ConsoleUtilsPrintf("Task 1 message %d!\r\n", i++);
-       xSemaphoreGive(xBinarySemaphore);
-       vTaskDelay(1000);
-    }
-}
+#include "uart_irda_cir.h"
+#include "soc_AM335x.h"
+#include "interrupt.h"
+#include "consoleUtils.h"
+#include "hw_types.h"
 
-void vTask2(void *pvParameters) {
-    int i = 0, j;
-    while (1) {
-        xSemaphoreTake(xBinarySemaphore, portMAX_DELAY);
-        ConsoleUtilsPrintf("Task 2 message %d!\r\n", i++);
-        xSemaphoreGive(xBinarySemaphore);
-        vTaskDelay(500);
+void vTaskHeartbeat(void *pvParameters) {
+
+    /* Enable GPIO clocks */
+    GPIO1ModuleClkConfig();
+
+    /* Selecting GPIO1[23] pin for use. */
+    /* GPIO1[23] Maps to LED USR2 */
+    GPIO1Pin23PinMuxSetup();
+
+    /* Enabling the GPIO module. */
+    GPIOModuleEnable(USR2_LED_GPIO_INSTANCE_ADDRESS);
+
+    /* Resetting the GPIO module. */
+    GPIOModuleReset(USR2_LED_GPIO_INSTANCE_ADDRESS);
+
+    /* Setting the GPIO pin as an output pin. */
+    GPIODirModeSet(USR2_LED_GPIO_INSTANCE_ADDRESS,
+                   USR2_LED_GPIO_PIN,
+                   GPIO_DIR_OUTPUT);
+
+    while(1)
+    {
+
+        /* Driving a logic HIGH on the GPIO pin. */
+        GPIOPinWrite(USR2_LED_GPIO_INSTANCE_ADDRESS,
+                     USR2_LED_GPIO_PIN,
+                     GPIO_PIN_HIGH);
+
+        UARTFIFOWrite(SOC_UART_0_REGS, "heart\n", 6);
+
+        vTaskDelay(1000);
+
+        /* Driving a logic LOW on the GPIO pin. */
+        GPIOPinWrite(USR2_LED_GPIO_INSTANCE_ADDRESS,
+                     USR2_LED_GPIO_PIN,
+                     GPIO_PIN_LOW);
+
+        UARTFIFOWrite(SOC_UART_0_REGS, "beat\n", 5);
+
+        vTaskDelay(1000);
+
     }
+
 }
 
 int main() {
+
     configure_platform();
-    ConsoleUtilsPrintf("Platform initialized.\r\n");
 
-    xBinarySemaphore = xSemaphoreCreateBinary();
-    xSemaphoreGive(xBinarySemaphore);
+    UARTKISSInterface_init();
 
-    int ret = xTaskCreate(vTask1, "Task 1", 1000, NULL, 1, NULL);
-    if (ret == pdPASS) {
-        ConsoleUtilsPrintf("Task %x succesfully created.\r\n", vTask1);
-    } else {
-        ConsoleUtilsPrintf("Task not created: %d", ret);
-    }
-    ret =  xTaskCreate(vTask2, "Task 2", 1000, NULL, 2, NULL);
-    if (ret == pdPASS) {
-        ConsoleUtilsPrintf("Task %x succesfully created.\r\n", vTask2);
-    } else {
-        ConsoleUtilsPrintf("Task not created: %d", ret);
-    }
+    xTaskCreate(vTaskHeartbeat, "Heartbeat", 1000, NULL, 1, NULL);
+
     vTaskStartScheduler();
 
     while(1);
